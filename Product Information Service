@@ -1,0 +1,94 @@
+import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+
+// Product model
+class Product {
+  final String id;
+  final String name;
+  final String description;
+  final String imageUrl;
+
+  Product({
+    required this.id,
+    required this.name,
+    required this.description,
+    required this.imageUrl,
+  });
+
+  factory Product.fromJson(Map<String, dynamic> json) {
+    return Product(
+      id: json['id'],
+      name: json['name'],
+      description: json['description'],
+      imageUrl: json['imageUrl'],
+    );
+  }
+}
+
+// Service for fetching data
+class ProductService {
+  final String baseUrl = 'Your link';
+
+  Future<List<Product>> fetchProducts() async {
+    final response = await http.get(Uri.parse(baseUrl));
+
+    if (response.statusCode == 200) {
+      List<dynamic> jsonList = json.decode(response.body);
+      return jsonList.map((json) => Product.fromJson(json)).toList();
+    } else {
+      throw Exception('Failed to load products');
+    }
+  }
+}
+
+// Main screen
+class ProductListScreen extends StatelessWidget {
+  final ProductService productService = ProductService();
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text('Product Information')),
+      body: FutureBuilder<List<Product>>(
+        future: productService.fetchProducts(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return Center(child: CircularProgressIndicator());
+          } else if (snapshot.hasError) {
+            return Center(child: Text('Error: ${snapshot.error}'));
+          } else {
+            final products = snapshot.data;
+            return ListView.builder(
+              itemCount: products?.length,
+              itemBuilder: (context, index) {
+                final product = products![index];
+                return ListTile(
+                  title: Text(product.name),
+                  subtitle: Text(product.description),
+                  leading: Image.network(product.imageUrl),
+                );
+              },
+            );
+          }
+        },
+      ),
+    );
+  }
+}
+
+// Main function of the app
+void main() {
+  runApp(MyApp());
+}
+
+class MyApp extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Product Information Service',
+      theme: ThemeData(primarySwatch: Colors.blue),
+      home: ProductListScreen(),
+    );
+  }
+}
